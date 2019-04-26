@@ -9,11 +9,11 @@ import torch
 
 
 class PreProcess(object):
-    '''
+    """
         function:
             1. resize image and reconstitution bbox coordinate.
             2. reduce mean value.
-    '''
+    """
     def __init__(self, resize=(300, 300), rgb_means=(104, 117, 123)):
         self.means = rgb_means
         self.resize = resize
@@ -22,7 +22,7 @@ class PreProcess(object):
         boxes = target[:, :-1].copy()
         if len(boxes) == 0:
             targets = np.zeros((1, 5))
-            image = self.resize_mean(image, self.resize, self.means)
+            image, _ = self.resize_mean(image, targets, self.resize, self.means)
             return torch.from_numpy(image), targets
         img, tar = self.resize_mean(image.copy(), target.copy(), self.resize, self.means)
         return torch.from_numpy(img), tar
@@ -41,9 +41,10 @@ class PreProcess(object):
 
 
 class AnnotationTransform(object):
-    '''
-        parse xml file, acquire bbox coordinate and classify.
-    '''
+    """
+            parse xml file, acquire bbox coordinate and classify.
+
+    """
     VOC_CLASSES = ('__background__',  # always index 0
                    'aeroplane', 'bicycle', 'bird', 'boat',
                    'bottle', 'bus', 'car', 'cat', 'chair',
@@ -112,7 +113,7 @@ def detection_collate(batch):
 
 
 if __name__ == '__main__':
-    data_path = '/home/lintaowx/datasets/VOC/VOCdevkit/VOC2007'
+    data_path = '/mnt/storage/project/data/VOCdevkit/VOC2007'
     data_set = LoadVocDataSets(data_path, 'trainval', AnnotationTransform(), PreProcess())
     batch_size = 32
     batch_iter = iter(DataLoader(data_set, batch_size, shuffle=False, num_workers=6, collate_fn=detection_collate))
