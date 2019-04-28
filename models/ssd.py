@@ -7,7 +7,7 @@ sys.path.append("../")
 from backbone.vgg import VGG
 from module.l2norm import L2Norm
 from module.prior_box import PriorBox
-
+from loss.multibox_loss import MultiBoxLoss
 # SSD300 CONFIGS
 voc = {
     'num_classes': 21,
@@ -146,9 +146,13 @@ class SSD(nn.Module):
 
 def main():
     import numpy as np
-    ssd = SSD().cuda()
+    ssd = SSD(image_size=300, num_classes=10).cuda()
     x = np.random.normal(0, 1, size=(32, 3, 300, 300)).astype(np.float32)
     output = ssd.forward(torch.from_numpy(x).cuda())
+    criterion = MultiBoxLoss(num_classes=10, overlap_thresh=0.5, prior_for_matching=True,
+                             bkg_label=0, neg_mining=True, neg_pos=3, neg_overlap=0.5, encode_target=False)
+
+    criterion()
     pass
 
 
