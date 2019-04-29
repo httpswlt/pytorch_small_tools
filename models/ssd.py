@@ -51,10 +51,6 @@ class SSD(nn.Module):
         # predict location and classification layers
         self.loc, self.conf = (nn.ModuleList(temp) for temp in self.detector_layer(mboxs))
 
-        # produce default bounding, boxes specific to the layer's feature map size.
-        self.prior_box = PriorBox(voc)
-        pass
-
     def forward(self, x):
         sources = list()    # it contain some layers what will predict some location and classification
         loc = list()
@@ -90,8 +86,7 @@ class SSD(nn.Module):
         else:
             output = (
                 loc.view(loc.size(0), -1, 4),
-                conf.view(conf.size(0), -1, self.num_classes),
-                self.prior_box
+                conf.view(conf.size(0), -1, self.num_classes)
             )
         return output
 
@@ -146,14 +141,19 @@ class SSD(nn.Module):
 
 def main():
     import numpy as np
+    num_classes = 10
     ssd = SSD(image_size=300, num_classes=10).cuda()
-    x = np.random.normal(0, 1, size=(32, 3, 300, 300)).astype(np.float32)
-    output = ssd.forward(torch.from_numpy(x).cuda())
-    criterion = MultiBoxLoss(num_classes=10, overlap_thresh=0.5, prior_for_matching=True,
+    x = torch.as_tensor(np.random.normal(0, 1, size=(32, 3, 300, 300)).astype(np.float32)).cuda()
+    y = torch.as_tensor(np.array(
+        [[5, 5, 6, 6, np.random.randint(0, 9, 1)[0]],
+         [3, 3, 7, 8, np.random.randint(0, 9, 1)[0]]]*32).astype(np.float32).reshape(32, -1, 5)).cuda()
+    output = ssd.forward(x)
+    criterion = MultiBoxLoss(num_classes=num_classes, overlap_thresh=0.5, prior_for_matching=True,
                              bkg_label=0, neg_mining=True, neg_pos=3, neg_overlap=0.5, encode_target=False)
-
-    criterion()
-    pass
+    # produce default bounding, boxes specific to the layer's feature map size.
+    priors = PriorBox(voc)
+    prior_box = priors.forward().cuda()
+    criterion(output, prior_box, y)
 
 
 if __name__ == '__main__':
