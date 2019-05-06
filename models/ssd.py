@@ -3,6 +3,9 @@ import sys
 import torch
 from torch import nn
 import torch.nn.functional as F
+from torchviz import make_dot
+from tensorboardX import SummaryWriter
+import numpy as np
 sys.path.append("../")
 from backbone.vgg import VGG
 from module.l2norm import L2Norm
@@ -140,7 +143,6 @@ class SSD(nn.Module):
 
 
 def main():
-    import numpy as np
     num_classes = 10
     ssd = SSD(image_size=300, num_classes=10).cuda()
     x = torch.as_tensor(np.random.normal(0, 1, size=(32, 3, 300, 300)).astype(np.float32)).cuda()
@@ -148,12 +150,17 @@ def main():
         [[5, 5, 6, 6, np.random.randint(0, 9, 1)[0]],
          [3, 3, 7, 8, np.random.randint(0, 9, 1)[0]]]*32).astype(np.float32).reshape(32, -1, 5)).cuda()
     output = ssd.forward(x)
-    criterion = MultiBoxLoss(num_classes=num_classes, overlap_thresh=0.5, prior_for_matching=True,
-                             bkg_label=0, neg_mining=True, neg_pos=3, neg_overlap=0.5, encode_target=False)
-    # produce default bounding, boxes specific to the layer's feature map size.
-    priors = PriorBox(voc)
-    prior_box = priors.forward().cuda()
-    criterion(output, prior_box, y)
+    vis_graph = make_dot(output, params=dict(list(ssd.named_parameters()) + [('x', x)]))
+    vis_graph.view()
+    # with SummaryWriter() as w:
+    #     w.add_graph(model=ssd, input_to_model=x)
+    # criterion = MultiBoxLoss(num_classes=num_classes, overlap_thresh=0.5, prior_for_matching=True,
+    #                          bkg_label=0, neg_mining=True, neg_pos=3, neg_overlap=0.5, encode_target=False)
+    # # produce default bounding, boxes specific to the layer's feature map size.
+    # priors = PriorBox(voc)
+    # prior_box = priors.forward().cuda()
+    # criterion(output, prior_box, y)
+
 
 
 if __name__ == '__main__':
