@@ -33,7 +33,6 @@ class MultiBoxLoss(nn.Module):
             labels = targets[idx][:, -1].data
             defaults = prior_box.data
             match(self.threshold, truths, defaults, self.variance, labels, loc_t, conf_t, idx)
-            pass
 
         loc_t = loc_t.cuda()
         conf_t = conf_t.cuda()

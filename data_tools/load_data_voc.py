@@ -36,7 +36,11 @@ class PreProcess(object):
         image -= mean
         w_, h_, _ = image.shape
         target[:, 0:-1:2] *= (float(w_) / w)
-        target[:, 1:-1:2] *= (float(w_) / w)
+        target[:, 1:-1:2] *= (float(h_) / h)
+
+        # x,y,w,h normalization
+        target[:, 0:-1:2] /= float(w)
+        target[:, 1:-1:2] /= float(h)
         return image.transpose(2, 0, 1), target
 
 

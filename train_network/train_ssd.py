@@ -3,8 +3,9 @@ import sys
 import torch
 from torch.utils.data import DataLoader
 from torch import optim
+from torch.nn import init
 import time
-sys.path.append("../")
+sys.path.insert(0, "../")
 from models.ssd import SSD
 from module.prior_box import PriorBox
 from loss.multibox_loss import MultiBoxLoss
@@ -13,9 +14,6 @@ from data_tools.load_data_voc import PreProcess, detection_collate
 from torch.autograd import Variable
 
 voc = {
-    'num_classes': 21,
-    'lr_steps': (80000, 100000, 120000),
-    'max_iter': 120000,
     'feature_maps': [38, 19, 10, 5, 3, 1],
     'image_size': 300,
     'steps': [8, 16, 32, 64, 100, 300],
@@ -24,27 +22,54 @@ voc = {
     'aspect_ratios': [[2], [2, 3], [2, 3], [2, 3], [2], [2]],
     'variance': [0.1, 0.2],
     'clip': True,
-    'name': 'VOC',
 }
 
 
+def xavier(param):
+    init.xavier_uniform(param)
+
+
+def weights_init(m):
+    classname=m.__class__.__name__
+    if classname.find('Conv') != -1:
+        # xavier(m.weight.data)
+        # xavier(m.bias.data)
+        init.xavier_uniform(m.weight.data)
+        init.constant(m.bias.data, 0.1)
+
+# def weights_init(m):
+#
+#
+#     for key in m.state_dict():
+#         if key.split('.')[-1] == 'weight':
+#             if 'conv' in key:
+#                 # init.kaiming_normal_(m.state_dict()[key], mode='fan_out')
+#                 init.xavier_uniform()
+#             if 'bn' in key:
+#                 m.state_dict()[key][...] = 1
+#         elif key.split('.')[-1] == 'bias':
+#             m.state_dict()[key][...] = 0
+
+
 def main():
-    lr = 0.01
+    lr = 4e-3
     num_classes = 21
     epoch = 30
     batch_size = 32
-    # data_path = '/mnt/storage/project/data/VOCdevkit/VOC2007'
-    data_path = '/home/lintaowx/datasets/VOC/VOCdevkit/VOC2007'
+    data_path = '/mnt/storage/project/data/VOCdevkit/VOC2007'
+    # data_path = '/home/lintaowx/datasets/VOC/VOCdevkit/VOC2007'
 
     # define data.
     data_set = LoadVocDataSets(data_path, 'trainval', AnnotationTransform(), PreProcess())
 
-    # define default bbox
+    # generate default bbox
     priors = PriorBox(voc)
     prior_box = priors.forward().cuda()
 
     # define network.
     ssd = SSD(image_size=300, num_classes=num_classes).cuda()
+    ssd.apply(weights_init)
+    print(ssd)
 
     # define loss function
     criterion = MultiBoxLoss(num_classes=num_classes, overlap_thresh=0.5, prior_for_matching=True,
