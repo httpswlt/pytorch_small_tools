@@ -3,30 +3,9 @@ import sys
 import torch
 from torch import nn
 import torch.nn.functional as F
-from torch import optim
-from torchviz import make_dot
-from tensorboardX import SummaryWriter
-import numpy as np
 sys.path.append("../")
 from backbone.vgg import VGG
 from module.l2norm import L2Norm
-from module.prior_box import PriorBox
-from loss.multibox_loss import MultiBoxLoss
-# SSD300 CONFIGS
-voc = {
-    'num_classes': 21,
-    'lr_steps': (80000, 100000, 120000),
-    'max_iter': 120000,
-    'feature_maps': [38, 19, 10, 5, 3, 1],
-    'image_size': 300,
-    'steps': [8, 16, 32, 64, 100, 300],
-    'min_sizes': [30, 60, 111, 162, 213, 264],
-    'max_sizes': [60, 111, 162, 213, 264, 315],
-    'aspect_ratios': [[2], [2, 3], [2, 3], [2, 3], [2], [2]],
-    'variance': [0.1, 0.2],
-    'clip': True,
-    'name': 'VOC',
-}
 
 
 class SSD(nn.Module):
@@ -143,34 +122,3 @@ class SSD(nn.Module):
         return layers
 
 
-def main():
-    num_classes = 10
-    ssd = SSD(image_size=300, num_classes=10).cuda()
-    x = torch.as_tensor(np.random.normal(0, 1, size=(32, 3, 300, 300)).astype(np.float32)).cuda()
-    y = torch.as_tensor(np.array(
-        [[5, 5, 6, 6, np.random.randint(0, 9, 1)[0]],
-         [3, 3, 7, 8, np.random.randint(0, 9, 1)[0]]]*32).astype(np.float32).reshape(32, -1, 5)).cuda()
-    # with SummaryWriter() as w:
-    #     w.add_graph(model=ssd, input_to_model=x)
-    criterion = MultiBoxLoss(num_classes=num_classes, overlap_thresh=0.5, prior_for_matching=True,
-                             bkg_label=0, neg_mining=True, neg_pos=3, neg_overlap=0.5, encode_target=False)
-    # produce default bounding, boxes specific to the layer's feature map size.
-    priors = PriorBox(voc)
-    prior_box = priors.forward().cuda()
-    # optimizer
-    optimizer = optim.SGD(ssd.parameters(), lr=0.01,momentum=0.9, weight_decay=5e-4)
-
-    # forward
-    output = ssd.forward(x)
-    # backprop
-    optimizer.zero_grad()
-    loss_l, loss_c = criterion(output, prior_box, y)
-    # calculate loss
-    loss = loss_l + loss_c
-    loss.backward()
-    optimizer.step()
-    print loss
-
-
-if __name__ == '__main__':
-    main()
