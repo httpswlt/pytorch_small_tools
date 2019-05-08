@@ -5,13 +5,14 @@ from torch.utils.data import DataLoader
 from torch import optim
 from torch.nn import init
 import time
+from torch.autograd import Variable
 sys.path.insert(0, "../")
 from models.ssd import SSD
 from module.prior_box import PriorBox
 from loss.multibox_loss import MultiBoxLoss
 from data_tools.load_data_voc import LoadVocDataSets, AnnotationTransform
 from data_tools.load_data_voc import PreProcess, detection_collate
-from torch.autograd import Variable
+from utils.tools import adjust_learning_rate
 
 voc = {
     'feature_maps': [38, 19, 10, 5, 3, 1],
@@ -52,12 +53,13 @@ def weights_init(m):
 
 
 def main():
-    lr = 4e-3
+    lr = 5e-4
+    gamma = 0.9
     num_classes = 21
     epoch = 30
     batch_size = 32
-    data_path = '/mnt/storage/project/data/VOCdevkit/VOC2007'
-    # data_path = '/home/lintaowx/datasets/VOC/VOCdevkit/VOC2007'
+    # data_path = '/mnt/storage/project/data/VOCdevkit/VOC2007'
+    data_path = '/home/lintaowx/datasets/VOC/VOCdevkit/VOC2007'
 
     # define data.
     data_set = LoadVocDataSets(data_path, 'trainval', AnnotationTransform(), PreProcess())
@@ -70,6 +72,9 @@ def main():
     ssd = SSD(image_size=300, num_classes=num_classes).cuda()
     ssd.apply(weights_init)
     print(ssd)
+    ssd.vgg.load_state_dict(torch.load("../premodel/vgg16_reducedfc.pth"))
+    # load pretrain model
+    # ssd.load_state_dict(torch.load('./ssd_epoches_2028.pth'))
 
     # define loss function
     criterion = MultiBoxLoss(num_classes=num_classes, overlap_thresh=0.5, prior_for_matching=True,
@@ -89,15 +94,18 @@ def main():
                                          num_workers=6, collate_fn=detection_collate))
             loc_loss = 0
             conf_loss = 0
-            torch.save(ssd.state_dict(), 'epoches_' + repr(iteration) + '.pth')
+            torch.save(ssd.state_dict(), 'ssd_epoches_' + repr(iteration) + '.pth')
+
+        # auto adjust lr
+        lr_ = adjust_learning_rate(lr, optimizer, gamma, epoch, iteration/epoch_size, iteration, epoch)
 
         # count time
         load_t0 = time.time()
 
         # load data
         images, targets = next(batch_iter)
-        images = Variable(images.cuda())
-        targets = [Variable(anno.cuda()) for anno in targets]
+        images = images.cuda()
+        targets = [anno.cuda() for anno in targets]
 
         # forward
         output = ssd.forward(images)
@@ -119,7 +127,7 @@ def main():
                   + '|| Totel iter ' +
                   repr(iteration) + ' || L: %.4f C: %.4f||' % (
                 loss_l.item(), loss_c.item()) +
-                'Batch time: %.4f sec. ||' % (load_t1 - load_t0) + 'LR: %.8f' % lr)
+                'Batch time: %.4f sec. ||' % (load_t1 - load_t0) + 'LR: %.8f' % optimizer.param_groups[0]['lr'])#lr)
 
 
 if __name__ == '__main__':

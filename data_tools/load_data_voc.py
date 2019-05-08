@@ -6,8 +6,7 @@ import xml.etree.ElementTree as ET
 import cv2
 import random
 import torch
-
-
+import time
 class PreProcess(object):
     """
         function:
@@ -28,19 +27,19 @@ class PreProcess(object):
         return torch.from_numpy(img), tar
 
     def resize_mean(self, image, target, im_size, mean):
-        w, h, _ = image.shape
+        h, w, _ = image.shape
         interp_methods = [cv2.INTER_LINEAR, cv2.INTER_CUBIC, cv2.INTER_AREA, cv2.INTER_NEAREST, cv2.INTER_LANCZOS4]
         interp_method = interp_methods[random.randrange(5)]
         image = cv2.resize(image, im_size, interpolation=interp_method)
         image = image.astype(np.float32)
         image -= mean
-        w_, h_, _ = image.shape
+        h_, w_, _ = image.shape
         target[:, 0:-1:2] *= (float(w_) / w)
         target[:, 1:-1:2] *= (float(h_) / h)
 
         # x,y,w,h normalization
-        target[:, 0:-1:2] /= float(w)
-        target[:, 1:-1:2] /= float(h)
+        target[:, 0:-1:2] /= float(w_)
+        target[:, 1:-1:2] /= float(h_)
         return image.transpose(2, 0, 1), target
 
 
@@ -117,10 +116,11 @@ def detection_collate(batch):
 
 
 if __name__ == '__main__':
-    data_path = '/mnt/storage/project/data/VOCdevkit/VOC2007'
+    # data_path = '/mnt/storage/project/data/VOCdevkit/VOC2007'
+    data_path = '/home/lintaowx/datasets/VOC/VOCdevkit/VOC2007'
     data_set = LoadVocDataSets(data_path, 'trainval', AnnotationTransform(), PreProcess())
     batch_size = 32
-    batch_iter = iter(DataLoader(data_set, batch_size, shuffle=False, num_workers=6, collate_fn=detection_collate))
+    batch_iter = iter(DataLoader(data_set, batch_size, shuffle=False, num_workers=2, collate_fn=detection_collate))
     for i in range(1000):
         images, targets = next(batch_iter)
         print(len(images))
