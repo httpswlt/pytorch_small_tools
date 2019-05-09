@@ -40,7 +40,24 @@ class PreProcess(object):
         # x1, y2, x2, y2 normalization
         target[:, 0:-1:2] /= float(w_)
         target[:, 1:-1:2] /= float(h_)
+
+        # convert x1,y1,x2,y2 to x,y,w,h
+        target = self.to_xywh(target)
+
         return image.transpose(2, 0, 1), target
+
+    @staticmethod
+    def to_xywh(target):
+        x1 = target[:, 0].reshape(-1, 1)
+        y1 = target[:, 1].reshape(-1, 1)
+        x2 = target[:, 2].reshape(-1, 1)
+        y2 = target[:, 3].reshape(-1, 1)
+        cls = target[:, -1].reshape(-1, 1)
+        w = (x2 - x1)
+        h = (y2 - y1)
+        return np.hstack((x1, y1, w, h, cls))
+
+
 
 
 class AnnotationTransform(object):
@@ -116,8 +133,8 @@ def detection_collate(batch):
 
 
 if __name__ == '__main__':
-    # data_path = '/mnt/storage/project/data/VOCdevkit/VOC2007'
-    data_path = '/home/lintaowx/datasets/VOC/VOCdevkit/VOC2007'
+    data_path = '/mnt/storage/project/data/VOCdevkit/VOC2007'
+    # data_path = '/home/lintaowx/datasets/VOC/VOCdevkit/VOC2007'
     data_set = LoadVocDataSets(data_path, 'trainval', AnnotationTransform(), PreProcess())
     batch_size = 32
     batch_iter = iter(DataLoader(data_set, batch_size, shuffle=False, num_workers=1, collate_fn=detection_collate))

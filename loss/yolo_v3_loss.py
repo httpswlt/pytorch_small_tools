@@ -3,6 +3,8 @@ import torch
 from torch import nn
 import numpy as np
 import math
+import sys
+sys.path.insert(0, '../')
 
 
 class YOlOLoss(nn.Module):
@@ -64,11 +66,22 @@ class YOlOLoss(nn.Module):
         tconf = torch.zeros(self.batch_size, self.num_anchors, h, w)
         tcls = torch.zeros(self.batch_size, self.num_anchors, h, w, self.classes)
 
-        target[:, :, :-1:2] *= w
-        target[:, :, 1:-1:2] *= w
+        target_bbox = target.copy_()
+        target_bbox[..., ::2] *= w
+        target_bbox[..., 1:-1:2] *= h
+        gxy = target_bbox[..., :2]
+        gwh = target_bbox[..., 2:-1]
+        # anchor_shape = torch.FloatTensor(np.concatenate((np.zeros((self.num_anchors, 2)),
+        #                                                  np.array(anchors)), 1))
 
+        def construct_bbox(wh):
+            temp = wh.reshape(-1, 2)
+            return torch.cat((torch.zeros_like(temp), temp), 1)
+        gwh_box = construct_bbox(gwh)
+        a = [jaccard(gwh_box, construct_bbox(torch.as_tensor(anchor))) for anchor in anchors]
 
-
+        pass
+        # jaccard(anchor_shape, torch.FloatTensor(np.array([0, 0, gw, gh])))
 
         # for bs in range(self.batch_size):
         #     for t in range(target.shape[1]):
@@ -79,12 +92,12 @@ class YOlOLoss(nn.Module):
         #         gy = target[bs, t, 2] * h
         #         gw = target[bs, t, 3] * w
         #         gh = target[bs, t, 4] * h
-        #         # get grid box indices
+        #         # get grid box index, then compute coordinate offset.
         #         gi = int(gx)
         #         gj = int(gy)
-        #         # get shape of gt box
+        #         # construct gt box by wh
         #         gt_box = torch.FloatTensor(np.array([0, 0, gw, gh])).unsqueeze(0)
-        #         # get shape of anchor box
+        #         # construct default box by default w,h of anchor
         #         anchor_shapes = torch.FloatTensor(np.concatenate((np.zeros((self.num_anchors, 2)),
         #                                                           np.array(anchors)), 1))
         #         # Calculate iou between gt and anchor shapes
@@ -106,19 +119,25 @@ class YOlOLoss(nn.Module):
         #         tconf[bs, best_n, gj, gi] = 1
         #         # One-hot encoding of label
         #         tcls[bs, best_n, gj, gi, int(target[bs, t, 0])] = 1
+        #
+        #     return obj_mask, noobj_mask, tx, ty, tw, th, tconf, tcls
 
-            # return obj_mask, noobj_mask, tx, ty, tw, th, tconf, tcls
-
-    def mse_loss(self):
-        pass
-
+    @staticmethod
+    def bbox_wh_iou(wh1, wh2):
+        wh2 = wh2.t()
+        wh1 = torch.as_tensor(wh1)
+        w1, h1 = wh1[0], wh1[1]
+        w2, h2 = wh2[0], wh2[1]
+        inter_area = torch.min(w1, w2) * torch.min(h1, h2)
+        union_area = (w1 * h1 + 1e-16) + w2 * h2 - inter_area
+        return inter_area / union_area
 
 def main():
     from models.yolov3 import YOLOV3, parameter
     model = YOLOV3(parameter)
     x = torch.randn((1, 3, 416, 416))
     y0, y1, y2 = model(x)
-    target = torch.rand((1, 3, 5))
+    target = torch.rand((2, 3, 5))
     loss = YOlOLoss(21, parameter['yolo']['anchors'][0], (416, 416))
     loss(y0, target)
 
