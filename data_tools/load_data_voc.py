@@ -37,7 +37,7 @@ class PreProcess(object):
         target[:, 0:-1:2] *= (float(w_) / w)
         target[:, 1:-1:2] *= (float(h_) / h)
 
-        # x,y,w,h normalization
+        # x1, y2, x2, y2 normalization
         target[:, 0:-1:2] /= float(w_)
         target[:, 1:-1:2] /= float(h_)
         return image.transpose(2, 0, 1), target
@@ -120,7 +120,7 @@ if __name__ == '__main__':
     data_path = '/home/lintaowx/datasets/VOC/VOCdevkit/VOC2007'
     data_set = LoadVocDataSets(data_path, 'trainval', AnnotationTransform(), PreProcess())
     batch_size = 32
-    batch_iter = iter(DataLoader(data_set, batch_size, shuffle=False, num_workers=2, collate_fn=detection_collate))
+    batch_iter = iter(DataLoader(data_set, batch_size, shuffle=False, num_workers=1, collate_fn=detection_collate))
     for i in range(1000):
         images, targets = next(batch_iter)
         print(len(images))

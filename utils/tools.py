@@ -1,4 +1,5 @@
 # coding:utf-8
+from torch import nn
 
 
 def adjust_learning_rate(lr, optimizer, gamma, epoch, step_index, iteration, epoch_size):
@@ -13,6 +14,26 @@ def adjust_learning_rate(lr, optimizer, gamma, epoch, step_index, iteration, epo
     for param_group in optimizer.param_groups:
         param_group['lr'] = lr_
     return lr_
+
+
+def init_parameters_msra(model):
+    # init weight by MSRA
+    init_parameters(model, nn.init.kaiming_normal_)
+
+
+def init_parameters_xavier(model):
+    # init weight by xavier
+    init_parameters(model, nn.init.xavier_uniform_)
+
+
+def init_parameters(model, meth):
+    for m in model.modules():
+        if isinstance(m, nn.Conv2d):
+            meth(m.weight)
+            m.bias.data.zero_()
+        elif isinstance(m, nn.BatchNorm2d):
+            m.weight.data.fill_(1)
+            m.bias.data.zero_()
 
 
 def draw_image(image, coordinate):

@@ -54,9 +54,9 @@ def weights_init(m):
 
 def main():
     lr = 5e-4
-    gamma = 0.9
+    gamma = 0.2
     num_classes = 21
-    epoch = 30
+    epoch = 300
     batch_size = 32
     # data_path = '/mnt/storage/project/data/VOCdevkit/VOC2007'
     data_path = '/home/lintaowx/datasets/VOC/VOCdevkit/VOC2007'
@@ -72,9 +72,9 @@ def main():
     ssd = SSD(image_size=300, num_classes=num_classes).cuda()
     ssd.apply(weights_init)
     print(ssd)
-    ssd.vgg.load_state_dict(torch.load("../premodel/vgg16_reducedfc.pth"))
     # load pretrain model
-    # ssd.load_state_dict(torch.load('./ssd_epoches_2028.pth'))
+    ssd.vgg.load_state_dict(torch.load("../premodel/vgg16_reducedfc.pth"))
+    # ssd.load_state_dict(torch.load('./ssd_epoches_4524.pth'))
 
     # define loss function
     criterion = MultiBoxLoss(num_classes=num_classes, overlap_thresh=0.5, prior_for_matching=True,
@@ -86,6 +86,7 @@ def main():
     epoch_size = len(data_set) // batch_size
     max_iter = epoch_size * epoch
 
+    adjust = 0
     # start iteration
     for iteration in range(max_iter):
         if iteration % epoch_size == 0:
@@ -97,7 +98,9 @@ def main():
             torch.save(ssd.state_dict(), 'ssd_epoches_' + repr(iteration) + '.pth')
 
         # auto adjust lr
-        lr_ = adjust_learning_rate(lr, optimizer, gamma, epoch, iteration/epoch_size, iteration, epoch)
+        if (iteration / float(epoch_size)) % 50 == 0:
+            lr_ = adjust_learning_rate(lr, optimizer, gamma, epoch, adjust, iteration, epoch_size)
+            adjust += 1
 
         # count time
         load_t0 = time.time()
