@@ -2,8 +2,8 @@
 import torch
 from torch import nn
 import numpy as np
-import math
 import sys
+from utils.box_utils import jaccard
 sys.path.insert(0, '../')
 
 
@@ -56,7 +56,6 @@ class YOlOLoss(nn.Module):
 
 
     def build_targets(self, target, anchors, w, h, ignore_threshold):
-        from utils.box_utils import jaccard
         obj_mask = torch.zeros(self.batch_size, self.num_anchors, h, w)
         noobj_mask = torch.ones(self.batch_size, self.num_anchors, h, w)
         tx = torch.zeros(self.batch_size, self.num_anchors, h, w)
@@ -66,21 +65,96 @@ class YOlOLoss(nn.Module):
         tconf = torch.zeros(self.batch_size, self.num_anchors, h, w)
         tcls = torch.zeros(self.batch_size, self.num_anchors, h, w, self.classes)
 
-        target_bbox = target.copy_()
-        target_bbox[..., ::2] *= w
+        target_bbox = target[..., ::] * 1
+        target_bbox[..., :-1:2] *= w
         target_bbox[..., 1:-1:2] *= h
-        gxy = target_bbox[..., :2]
+        # gxy = target_bbox[..., :2]
         gwh = target_bbox[..., 2:-1]
-        # anchor_shape = torch.FloatTensor(np.concatenate((np.zeros((self.num_anchors, 2)),
-        #                                                  np.array(anchors)), 1))
+        anchor_shape = torch.FloatTensor(np.concatenate((np.zeros((self.num_anchors, 2)), np.array(anchors)), 1))
+        gwh_shape = torch.FloatTensor(np.concatenate((np.zeros_like(gwh), np.array(gwh)), 2)).contiguous()
+        # gwh_reshape = gwh_shape.reshape(-1, 4)
+        # ious = [jaccard(gwh_reshape[i, :].unsqueeze(0), anchor_shape) for i in range(gwh_reshape.size(0))]
+        # ious = torch.stack(ious).contiguous().squeeze()
+        # gx = gxy[:, :, 0]
+        # gy = gxy[:, :, 1]
+        # gi = gx.long()
+        # gj = gy.long()
+        # _, _, gw, gh = gwh_reshape.t()
+        # gw = gw.reshape(self.batch_size, -1)
+        # gh = gh.reshape(self.batch_size, -1)
+        # # set object mask
+        # best_iou, best_index = torch.max(ious, 1)
+        # ious = ious.reshape((self.batch_size, -1, self.num_anchors))
+        # best_index = best_index.reshape((self.batch_size, self.num_anchors))
+        # for i in range(self.batch_size):
+        #     temp_i = gi[i, ...]
+        #     temp_j = gj[i, ...]
+        #     best_n = best_index[i, ...]
+        #     obj_mask[i, best_n, temp_j, temp_i] = 1
+        #     noobj_mask[i, best_n, temp_j, temp_i] = 0
+        #     noobj_mask[i, ious[i:, ] > self.ignore_threshold, temp_j, temp_i] = 0
+        #     tx[i, best_n, temp_j, temp_i] = gx[i,  ...] - gx[i, ...].floor()
+        #     ty[i, best_n, temp_j, temp_i] = gy[i,  ...] - gy[i, ...].floor()
+        #     tw[i, best_n, temp_j, temp_i] = torch.log(gw[i, ...] / anchors[best_n][:, 0] + 1e-16)
+        #     th[i, best_n, temp_j, temp_i] = torch.log(gh[i, ...] / anchors[best_n][:, 1] + 1e-16)
+        #
+        for bs in range(target_bbox.size(0)):
+            for tg in range(target_bbox.size(1)):
+                if target_bbox[bs, tg][:-1].sum() == 0:
+                    continue
+                gx = target_bbox[bs, tg, 0]
+                gy = target_bbox[bs, tg, 1]
+                gw = target_bbox[bs, tg, 2]
+                gh = target_bbox[bs, tg, 3]
 
-        def construct_bbox(wh):
-            temp = wh.reshape(-1, 2)
-            return torch.cat((torch.zeros_like(temp), temp), 1)
-        gwh_box = construct_bbox(gwh)
-        a = [jaccard(gwh_box, construct_bbox(torch.as_tensor(anchor))) for anchor in anchors]
+                # Get grid box indices
+                gi = int(gx)
+                gj = int(gy)
+                gi = 1 if gi == 0 else gi
+                gj = 1 if gj == 0 else gj
+                # acquire the best anchor by computing ious
+                anchor_ious = jaccard(gwh_shape[bs, tg].unsqueeze(0), anchor_shape).squeeze()
+                # if overlap more than threshold, set no object mask zero.
+                noobj_mask[bs, anchor_ious > ignore_threshold, gi, gj] = 0
+                # Find the best matching anchor box
+                best_n = np.argmax(anchor_ious)
+                # mask
+                obj_mask[bs, best_n, gj, gi] = 1
+                noobj_mask[bs, best_n, gj, gi] = 0
+                # coordinate
+                tx[bs, best_n, gj, gi] = gx - gi
+                ty[bs, best_n, gj, gi] = gy - gj
+                tw[bs, best_n, gj, gi] = torch.log(gw / anchors[best_n][0] + 1e-16)
+                th[bs, best_n, gj, gi] = torch.log(gh / anchors[best_n][1] + 1e-16)
+                # object
+                tconf[bs, best_n, gj, gi] = 1
+                # one-hot encoding of label
+                tcls[bs, best_n, gj, gi, int(target_bbox[bs, tg, -1])] = 1
+        return obj_mask, noobj_mask, tx, ty, tw, th, tconf, tcls
 
+
+
+
+
+
+        # return obj_mask, noobj_mask, tx, ty, tw, th, tconf, tcls
+
+
+        # ios = torch.stack(ious, 0).reshape((target_bbox.size(0), -1, anchor_shape.size(0)))
+        # temp = gxy.int()
+        # gi = temp[..., 0]
+        # gj = temp[..., 1]
+        # obj_mask
         pass
+
+
+        # def construct_bbox(wh):
+        #     temp = wh.reshape(-1, 2)
+        #     return torch.cat((torch.zeros_like(temp), temp), 1)
+        # gwh_box = construct_bbox(gwh)
+        # a = [jaccard(gwh_box, construct_bbox(torch.as_tensor(anchor))) for anchor in anchors]
+        #
+        # pass
         # jaccard(anchor_shape, torch.FloatTensor(np.array([0, 0, gw, gh])))
 
         # for bs in range(self.batch_size):
@@ -135,9 +209,9 @@ class YOlOLoss(nn.Module):
 def main():
     from models.yolov3 import YOLOV3, parameter
     model = YOLOV3(parameter)
-    x = torch.randn((1, 3, 416, 416))
+    x = torch.randn((2, 3, 416, 416))
     y0, y1, y2 = model(x)
-    target = torch.rand((2, 3, 5))
+    target = torch.rand((2, 4, 5))
     loss = YOlOLoss(21, parameter['yolo']['anchors'][0], (416, 416))
     loss(y0, target)
 
