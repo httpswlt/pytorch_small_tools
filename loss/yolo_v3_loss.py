@@ -20,6 +20,8 @@ class YOlOLoss(nn.Module):
         self.mse_loss = nn.MSELoss()
         self.bce_loss = nn.BCELoss()
         self.grid_size = 0
+        self.obj_scale = 1
+        self.noobj_scale = 0.5
 
     def forward(self, pred, targets):
         batch_size = pred.size(0)
@@ -42,22 +44,24 @@ class YOlOLoss(nn.Module):
         conf = torch.sigmoid(prediction[..., 4])
         pred_cls = torch.sigmoid(prediction[..., 5:])
 
-
         if targets is not None:
-            mask, noobj_mask, tx, ty, tw, th, tconf, tcls = \
+            obj_mask, noobj_mask, tx, ty, tw, th, tconf, tcls = \
                 self.build_targets(targets, scale_anchors, pred_im_w, pred_im_h, self.ignore_threshold)
             #  losses.
-            loss_x = self.mse_loss(x * mask, tx * mask)
-            loss_y = self.bce_loss(y * mask, ty * mask)
-            loss_w = self.mse_loss(w * mask, tw * mask)
-            loss_h = self.mse_loss(h * mask, th * mask)
-            loss_conf = self.bce_loss(conf * mask, mask) + \
-                        0.5 * self.bce_loss(conf * noobj_mask, noobj_mask * 0.0)
-
+            loss_x = self.mse_loss(x[obj_mask], tx[obj_mask])
+            loss_y = self.mse_loss(y[obj_mask], ty[obj_mask])
+            loss_w = self.mse_loss(w[obj_mask], tw[obj_mask])
+            loss_h = self.mse_loss(h[obj_mask], th[obj_mask])
+            loss_conf_obj = self.bce_loss(pred_cls[obj_mask], tconf[obj_mask])
+            loss_conf_noobj = self.bce_loss(pred_cls[noobj_mask], tconf[noobj_mask])
+            loss_conf = self.obj_scale * loss_conf_obj + self.noobj_scale * loss_conf_noobj
+            loss_cls = self.bce_loss(pred_cls[obj_mask], tcls[obj_mask])
+            total_loss = loss_x + loss_y + loss_w + loss_h + loss_conf + loss_cls
+        return total_loss
 
     def build_targets(self, target, anchors, w, h, ignore_threshold):
-        obj_mask = torch.zeros(self.batch_size, self.num_anchors, h, w)
-        noobj_mask = torch.ones(self.batch_size, self.num_anchors, h, w)
+        obj_mask = torch.zeros(self.batch_size, self.num_anchors, h, w).byte()
+        noobj_mask = torch.ones(self.batch_size, self.num_anchors, h, w).byte()
         tx = torch.zeros(self.batch_size, self.num_anchors, h, w)
         ty = torch.zeros(self.batch_size, self.num_anchors, h, w)
         tw = torch.zeros(self.batch_size, self.num_anchors, h, w)
@@ -68,36 +72,9 @@ class YOlOLoss(nn.Module):
         target_bbox = target[..., ::] * 1
         target_bbox[..., :-1:2] *= w
         target_bbox[..., 1:-1:2] *= h
-        # gxy = target_bbox[..., :2]
         gwh = target_bbox[..., 2:-1]
         anchor_shape = torch.FloatTensor(np.concatenate((np.zeros((self.num_anchors, 2)), np.array(anchors)), 1))
         gwh_shape = torch.FloatTensor(np.concatenate((np.zeros_like(gwh), np.array(gwh)), 2)).contiguous()
-        # gwh_reshape = gwh_shape.reshape(-1, 4)
-        # ious = [jaccard(gwh_reshape[i, :].unsqueeze(0), anchor_shape) for i in range(gwh_reshape.size(0))]
-        # ious = torch.stack(ious).contiguous().squeeze()
-        # gx = gxy[:, :, 0]
-        # gy = gxy[:, :, 1]
-        # gi = gx.long()
-        # gj = gy.long()
-        # _, _, gw, gh = gwh_reshape.t()
-        # gw = gw.reshape(self.batch_size, -1)
-        # gh = gh.reshape(self.batch_size, -1)
-        # # set object mask
-        # best_iou, best_index = torch.max(ious, 1)
-        # ious = ious.reshape((self.batch_size, -1, self.num_anchors))
-        # best_index = best_index.reshape((self.batch_size, self.num_anchors))
-        # for i in range(self.batch_size):
-        #     temp_i = gi[i, ...]
-        #     temp_j = gj[i, ...]
-        #     best_n = best_index[i, ...]
-        #     obj_mask[i, best_n, temp_j, temp_i] = 1
-        #     noobj_mask[i, best_n, temp_j, temp_i] = 0
-        #     noobj_mask[i, ious[i:, ] > self.ignore_threshold, temp_j, temp_i] = 0
-        #     tx[i, best_n, temp_j, temp_i] = gx[i,  ...] - gx[i, ...].floor()
-        #     ty[i, best_n, temp_j, temp_i] = gy[i,  ...] - gy[i, ...].floor()
-        #     tw[i, best_n, temp_j, temp_i] = torch.log(gw[i, ...] / anchors[best_n][:, 0] + 1e-16)
-        #     th[i, best_n, temp_j, temp_i] = torch.log(gh[i, ...] / anchors[best_n][:, 1] + 1e-16)
-        #
         for bs in range(target_bbox.size(0)):
             for tg in range(target_bbox.size(1)):
                 if target_bbox[bs, tg][:-1].sum() == 0:
@@ -106,7 +83,6 @@ class YOlOLoss(nn.Module):
                 gy = target_bbox[bs, tg, 1]
                 gw = target_bbox[bs, tg, 2]
                 gh = target_bbox[bs, tg, 3]
-
                 # Get grid box indices
                 gi = int(gx)
                 gj = int(gy)
@@ -131,70 +107,6 @@ class YOlOLoss(nn.Module):
                 # one-hot encoding of label
                 tcls[bs, best_n, gj, gi, int(target_bbox[bs, tg, -1])] = 1
         return obj_mask, noobj_mask, tx, ty, tw, th, tconf, tcls
-
-
-
-
-
-
-        # return obj_mask, noobj_mask, tx, ty, tw, th, tconf, tcls
-
-
-        # ios = torch.stack(ious, 0).reshape((target_bbox.size(0), -1, anchor_shape.size(0)))
-        # temp = gxy.int()
-        # gi = temp[..., 0]
-        # gj = temp[..., 1]
-        # obj_mask
-        pass
-
-
-        # def construct_bbox(wh):
-        #     temp = wh.reshape(-1, 2)
-        #     return torch.cat((torch.zeros_like(temp), temp), 1)
-        # gwh_box = construct_bbox(gwh)
-        # a = [jaccard(gwh_box, construct_bbox(torch.as_tensor(anchor))) for anchor in anchors]
-        #
-        # pass
-        # jaccard(anchor_shape, torch.FloatTensor(np.array([0, 0, gw, gh])))
-
-        # for bs in range(self.batch_size):
-        #     for t in range(target.shape[1]):
-        #         if target[bs, t].sum() == 0:
-        #             continue
-        #         # Convert to position relative to box
-        #         gx = target[bs, t, 1] * w
-        #         gy = target[bs, t, 2] * h
-        #         gw = target[bs, t, 3] * w
-        #         gh = target[bs, t, 4] * h
-        #         # get grid box index, then compute coordinate offset.
-        #         gi = int(gx)
-        #         gj = int(gy)
-        #         # construct gt box by wh
-        #         gt_box = torch.FloatTensor(np.array([0, 0, gw, gh])).unsqueeze(0)
-        #         # construct default box by default w,h of anchor
-        #         anchor_shapes = torch.FloatTensor(np.concatenate((np.zeros((self.num_anchors, 2)),
-        #                                                           np.array(anchors)), 1))
-        #         # Calculate iou between gt and anchor shapes
-        #         anch_ious = jaccard(gt_box, anchor_shapes).squeeze()
-        #         # Where the overlap is larger than threshold set mask to zero (ignore)
-        #         noobj_mask[bs, anch_ious > ignore_threshold, gj, gi] = 0
-        #         # Find the best matching anchor box
-        #         best_n = np.argmax(anch_ious)
-        #
-        #         # Masks
-        #         obj_mask[bs, best_n, gj, gi] = 1
-        #         # Coordinates
-        #         tx[bs, best_n, gj, gi] = gx - gi
-        #         ty[bs, best_n, gj, gi] = gy - gj
-        #         # Width and height
-        #         tw[bs, best_n, gj, gi] = math.log(gw / anchors[best_n][0] + 1e-16)
-        #         th[bs, best_n, gj, gi] = math.log(gh / anchors[best_n][1] + 1e-16)
-        #         # object
-        #         tconf[bs, best_n, gj, gi] = 1
-        #         # One-hot encoding of label
-        #         tcls[bs, best_n, gj, gi, int(target[bs, t, 0])] = 1
-        #
-        #     return obj_mask, noobj_mask, tx, ty, tw, th, tconf, tcls
 
     @staticmethod
     def bbox_wh_iou(wh1, wh2):
