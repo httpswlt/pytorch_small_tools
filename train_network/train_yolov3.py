@@ -59,10 +59,17 @@ def main():
         targets = [anno.cuda() for anno in targets]
 
         # forward
-        output = yolov3(images)
+        outputs = yolov3(images)
 
-        print output
-
+        # backward
+        optimizer.zero_grad()
+        loss = []
+        for i, output in enumerate(outputs):
+            loss.append(yolo_losses[i](output, targets))
+        total_loss = sum(loss)
+        total_loss.backward()
+        optimizer.step()
+        load_t1 = time.time()
 
 
 
