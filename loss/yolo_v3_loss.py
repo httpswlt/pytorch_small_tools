@@ -52,12 +52,12 @@ class YOlOLoss(nn.Module):
             loss_y = self.mse_loss(y[obj_mask], ty[obj_mask])
             loss_w = self.mse_loss(w[obj_mask], tw[obj_mask])
             loss_h = self.mse_loss(h[obj_mask], th[obj_mask])
-            loss_conf_obj = self.bce_loss(pred_cls[obj_mask], tconf[obj_mask])
-            loss_conf_noobj = self.bce_loss(pred_cls[noobj_mask], tconf[noobj_mask])
+            loss_conf_obj = self.bce_loss(conf[obj_mask], tconf[obj_mask])
+            loss_conf_noobj = self.bce_loss(conf[noobj_mask], tconf[noobj_mask])
             loss_conf = self.obj_scale * loss_conf_obj + self.noobj_scale * loss_conf_noobj
             loss_cls = self.bce_loss(pred_cls[obj_mask], tcls[obj_mask])
             total_loss = loss_x + loss_y + loss_w + loss_h + loss_conf + loss_cls
-        return total_loss
+            return total_loss
 
     def build_targets(self, target, anchors, w, h, ignore_threshold):
         obj_mask = torch.zeros(self.batch_size, self.num_anchors, h, w).byte()
