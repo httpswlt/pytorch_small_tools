@@ -4,14 +4,6 @@ from torch import nn
 from collections import OrderedDict
 from backbone.darknet import DarkNet, net
 
-parameter = {"yolo": {
-                        "anchors": [[[116, 90], [156, 198], [373, 326]],
-                                    [[30, 61], [62, 45], [59, 119]],
-                                    [[10, 13], [16, 30], [33, 23]]],
-                        "classes": 21,
-                    },
-            }
-
 
 class YOLOV3(nn.Module):
     def __init__(self, config):
@@ -20,17 +12,17 @@ class YOLOV3(nn.Module):
         backbone_output = self.backbone.layers_out_channels
 
         # embedding 0
-        final_out_channel0 = len(config["yolo"]["anchors"][0] * (5 + config["yolo"]["classes"]))
+        final_out_channel0 = len(config["anchors"][0] * (5 + config["classes"]))
         self.embedding0 = self._make_embedding([512, 1024], backbone_output[-1], final_out_channel0)
 
         # embedding 1
-        final_out_channel1 = len(config["yolo"]["anchors"][1]) * (5 + config["yolo"]["classes"])
+        final_out_channel1 = len(config["anchors"][1]) * (5 + config["classes"])
         self.embedding1_conv_block = self.conv2d_block(512, 256, 1)
         self.embedding1_upsample = nn.Upsample(scale_factor=2)
         self.embedding1 = self._make_embedding([256, 512], backbone_output[-2] + 256, final_out_channel1)
 
         # embedding 2
-        final_out_channel2 = len(config["yolo"]["anchors"][2]) * (5 + config["yolo"]["classes"])
+        final_out_channel2 = len(config["anchors"][2]) * (5 + config["classes"])
         self.embedding2_conv_block = self.conv2d_block(256, 128, 1)
         self.embedding2_upsample = nn.Upsample(scale_factor=2)
         self.embedding2 = self._make_embedding([128, 256], backbone_output[-3] + 128, final_out_channel2)

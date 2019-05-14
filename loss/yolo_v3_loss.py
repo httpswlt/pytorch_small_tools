@@ -8,20 +8,19 @@ sys.path.insert(0, '../')
 
 
 class YOlOLoss(nn.Module):
-    def __init__(self, classes, anchors, img_size):
+    def __init__(self, conf, i):
         super(YOlOLoss, self).__init__()
-        self.img_size = img_size
-        self.anchors = anchors
-        self.classes = classes
-        self.bbox_attrs = 5 + classes
-        self.ignore_threshold = 0.5
-        self.batch_size = 1
+        self.img_size = conf['img_size']
+        self.anchors = conf['anchors'][i]
+        self.classes = conf['classes']
+        self.bbox_attrs = 5 + self.classes
+        self.ignore_threshold = conf['ignore_threshold']
+        self.batch_size = conf['batch_size']
         self.num_anchors = len(self.anchors)
         self.mse_loss = nn.MSELoss()
         self.bce_loss = nn.BCELoss()
-        self.grid_size = 0
-        self.obj_scale = 1
-        self.noobj_scale = 0.5
+        self.obj_scale = conf['obj_scale']
+        self.noobj_scale = conf['noobj_scale']
 
     def forward(self, pred, targets):
         batch_size = pred.size(0)
@@ -117,6 +116,7 @@ class YOlOLoss(nn.Module):
         inter_area = torch.min(w1, w2) * torch.min(h1, h2)
         union_area = (w1 * h1 + 1e-16) + w2 * h2 - inter_area
         return inter_area / union_area
+
 
 def main():
     from models.yolov3 import YOLOV3, parameter
