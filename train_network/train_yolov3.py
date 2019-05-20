@@ -71,6 +71,11 @@ def main():
         optimizer.step()
         load_t1 = time.time()
 
+        if iteration % 10 == 0:
+            print('Epoch:' + repr(epoch) + ' || epochiter: ' + repr(iteration % epoch_size) + '/' + repr(epoch_size)
+                  + '|| Totel iter ' +
+                  repr(iteration) + ' ||Loss: %.4f||' % total_loss +
+                  'Batch time: %.4f sec. ||' % (load_t1 - load_t0) + 'LR: %.8f' % optimizer.param_groups[0]['lr'])#lr)
 
 
 if __name__ == '__main__':
