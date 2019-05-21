@@ -6,10 +6,14 @@ import torch
 
 
 class LoadClassifyDataSets(Dataset):
-    def __init__(self, path):
+    """
+     download url: http://www.cs.toronto.edu/~kriz/cifar.html
+    """
+    def __init__(self, path, image_size=32):
         self.path = path
         self.ids = []
         self.images = []
+        self.images_size = image_size
         for classify in os.listdir(self.path):
             temp = os.listdir(os.path.join(self.path, classify))
             self.images += temp
@@ -19,7 +23,10 @@ class LoadClassifyDataSets(Dataset):
         label = self.ids[index]
         img_name = self.images[index]
         img = cv2.imread(os.path.join(self.path, str(label), img_name))
-        return img, label
+        if img.shape[0] != self.images_size:
+            img = cv2.resize(img, (self.images_size, self.images_size))
+
+        return img.transpose(2, 0, 1), label
 
     def __len__(self):
         return len(self.ids)
@@ -38,9 +45,15 @@ if __name__ == '__main__':
     data_path = '/home/lintaowx/datasets/cifar10/train'
     data_set = LoadClassifyDataSets(data_path)
     batch_size = 32
-    batch_iter = iter(DataLoader(data_set, batch_size, shuffle=True, num_workers=1, collate_fn=collate_fn))
-    for i in range(1000):
-        images, targets = next(batch_iter)
-        print(len(images))
-        print(len(targets))
-        print("===========================")
+    loader = DataLoader(data_set, batch_size, shuffle=True, num_workers=1, collate_fn=collate_fn)
+
+    for i in range(10):
+        temp = iter(loader)
+        images, targets = next(temp)
+        while images is not None:
+            print(len(images))
+            print(len(targets))
+            print("===========================")
+            images, targets = next(temp, (0, 0))
+            if isinstance(images, int):
+                break
