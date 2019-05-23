@@ -51,7 +51,7 @@ parser.add_argument('--pretrained', dest='pretrained', action='store_true',
                     help='use pre-trained model')
 parser.add_argument('--world-size', default=2, type=int,
                     help='number of distributed processes')
-parser.add_argument('--dist-url', default='tcp://172.16.117.110:2222', type=str,
+parser.add_argument('--dist-url', default='tcp://172.16.123.114:10000', type=str,
                     help='url used to set up distributed training')
 parser.add_argument('--dist-backend', default='nccl', type=str,
                     help='distributed backend')
