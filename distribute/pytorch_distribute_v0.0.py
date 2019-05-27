@@ -6,7 +6,7 @@ from torch.utils.data import DataLoader, distributed
 torch.backends.cudnn.benchmark = True
 import time
 import os
-# os.environ.__setitem__('CUDA_VISIBLE_DEVICES', '0')
+
 
 def main(is_distributed, rank, ip):
     world_size = 1
@@ -42,7 +42,6 @@ def main(is_distributed, rank, ip):
     optimizer = torch.optim.SGD(model.parameters(), lr,
                                 momentum=momentum,
                                 weight_decay=weight_decay)
-
 
     # load train data
     data_path = '/home/lintaowx/datasets/cifar10/train'
