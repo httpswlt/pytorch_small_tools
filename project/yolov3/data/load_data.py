@@ -3,7 +3,6 @@ from torch.utils.data import Dataset, DataLoader
 import numpy as np
 import os
 import cv2
-import random
 import torch
 from data_utils import AnnotationTransform, PreProcess
 
@@ -59,7 +58,8 @@ def detection_collate(batch):
     imgs = []
     for _, sample in enumerate(batch):
         imgs.append(sample[0])
-        targets.append(torch.from_numpy(sample[1]).float())
+        temp = torch.from_numpy(sample[1]).float()
+        targets.append(torch.cat((torch.Tensor([[_]] * temp.size(0)), temp), 1))
     return torch.stack(imgs, 0), targets
 
 

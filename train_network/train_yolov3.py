@@ -1,5 +1,6 @@
 # coding: utf-8
-import torch
+import sys
+sys.path.insert(0, '..')
 from data_tools.load_data_voc import LoadVocDataSets, AnnotationTransform
 from data_tools.load_data_voc import PreProcess, detection_collate
 from models.yolov3 import YOLOV3
