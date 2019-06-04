@@ -11,7 +11,7 @@ class PreProcess(object):
             1. resize image and reconstitution bbox coordinate.
             2. reduce mean value.
     """
-    def __init__(self, resize=(300, 300), rgb_means=(104, 117, 123)):
+    def __init__(self, resize=(416, 416), rgb_means=(104, 117, 123)):
         self.means = rgb_means
         self.resize = resize
 

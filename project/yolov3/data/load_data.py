@@ -39,7 +39,7 @@ class LoadDataSets(Dataset):
             exit(0)
 
         if self.pre_process is not None:
-            self.img, target = self.pre_process(self.img, self.target)
+            self.img,  self.target = self.pre_process(self.img, self.target)
 
         return self.img, self.target
 
@@ -60,7 +60,7 @@ def detection_collate(batch):
         imgs.append(sample[0])
         temp = torch.from_numpy(sample[1]).float()
         targets.append(torch.cat((torch.Tensor([[_]] * temp.size(0)), temp), 1))
-    return torch.stack(imgs, 0), targets
+    return torch.stack(imgs, 0), torch.cat(targets, 0)
 
 
 if __name__ == '__main__':

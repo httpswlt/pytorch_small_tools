@@ -121,14 +121,21 @@ class Darknet(nn.Module):
 
 
 def main():
+    from data.load_data import *
     cfg_path = '../config/yolov3.cfg'
-    x = torch.ones((2, 3, 416, 416))
-    y = torch.Tensor([[0, 2, 3, 4, 5, 6],
-                      [0, 1, 2, 3, 4, 7],
-                      [1, 3, 6, 9, 12, 8],
-                      ])
-    darknet = Darknet(cfg_path)
-    darknet(x, y)
+    data_path = '/home/lintaowx/datasets/VOC/VOCdevkit/VOC2007'
+    data_set = LoadDataSets(data_path, 'trainval', AnnotationTransform(), PreProcess())
+    batch_size = 12
+    batch_iter = iter(DataLoader(data_set, batch_size, shuffle=False, num_workers=1, collate_fn=detection_collate))
+    darknet = Darknet(cfg_path).cuda()
+    darknet.train()
+    for x, y in batch_iter:
+        x = x.cuda()
+        y = y.cuda()
+        # with torch.no_grad():
+        darknet(x, y)
+        # torch.cuda.empty_cache()
+
 
 
 if __name__ == '__main__':

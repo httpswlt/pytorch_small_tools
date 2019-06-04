@@ -18,6 +18,8 @@ class YOLOLayer(nn.Module):
         self.ignore_threshold = 0.5
         self.mse_loss = nn.MSELoss()
         self.bce_loss = nn.BCELoss()
+        self.obj_scale = 1
+        self.noobj_scale = 0.5
 
         # common properties
         self.batch_size = 0
@@ -33,6 +35,9 @@ class YOLOLayer(nn.Module):
         self.h = 0
         self.pred_conf = 0
         self.pred_cls = 0
+        self.ByteTensor = None
+        self.FloatTensor = None
+        self.LongTensor = None
 
     def forward(self, inputs):
         """
@@ -56,6 +61,11 @@ class YOLOLayer(nn.Module):
                 .contiguous()
         )
 
+        # support CUDA
+        self.ByteTensor = torch.cuda.ByteTensor if self.prediction.is_cuda else torch.ByteTensor
+        self.FloatTensor = torch.cuda.FloatTensor if self.prediction.is_cuda else torch.FloatTensor
+        self.LongTensor = torch.cuda.LongTensor if self.prediction.is_cuda else torch.LongTensor
+
         # get outputs
         self.center_x = torch.sigmoid(self.prediction[..., 0])  # center x
         self.center_y = torch.sigmoid(self.prediction[..., 1])  # center y
@@ -64,8 +74,9 @@ class YOLOLayer(nn.Module):
         self.pred_conf = torch.sigmoid(self.prediction[..., 4])  # box confidence
         self.pred_cls = torch.sigmoid(self.prediction[..., 5:])  # object confidence of per classify
 
+        output = self.__detect()
         if target is None:
-            return self.__detect()
+            return output, 0
         else:
             obj_mask, noobj_mask, tx, ty, tw, th, tconf, tcls = self.__build_target(target)
             # Loss:
@@ -82,7 +93,7 @@ class YOLOLayer(nn.Module):
             loss_cls = self.bce_loss(self.pred_cls[obj_mask], tcls[obj_mask])
             # total losses
             total_loss = loss_x + loss_y + loss_w + loss_h + loss_conf + loss_cls
-            return total_loss
+            return output, total_loss
 
     def __build_target(self, target):
         """
@@ -90,14 +101,14 @@ class YOLOLayer(nn.Module):
         :param target: type: list: [[image_num, x, y, w, h, cls],...]
         :return:
         """
-        obj_mask = torch.zeros(self.batch_size, self.num_anchors, self.grid_h, self.grid_w, requires_grad=False)
-        noobj_mask = torch.ones(self.batch_size, self.num_anchors, self.grid_h, self.grid_w, requires_grad=False)
-        tx = torch.zeros(self.batch_size, self.num_anchors, self.grid_h, self.grid_w, requires_grad=False)
-        ty = torch.zeros(self.batch_size, self.num_anchors, self.grid_h, self.grid_w, requires_grad=False)
-        tw = torch.zeros(self.batch_size, self.num_anchors, self.grid_h, self.grid_w, requires_grad=False)
-        th = torch.zeros(self.batch_size, self.num_anchors, self.grid_h, self.grid_w, requires_grad=False)
-        tconf = torch.zeros(self.batch_size, self.num_anchors, self.grid_h, self.grid_w, requires_grad=False)
-        tcls = torch.zeros(self.batch_size, self.num_anchors, self.grid_h, self.grid_w, requires_grad=False)
+        obj_mask = self.ByteTensor(self.batch_size, self.num_anchors, self.grid_h, self.grid_w).fill_(0)
+        noobj_mask = self.ByteTensor(self.batch_size, self.num_anchors, self.grid_h, self.grid_w).fill_(1)
+        tx = self.FloatTensor(self.batch_size, self.num_anchors, self.grid_h, self.grid_w).fill_(0)
+        ty = self.FloatTensor(self.batch_size, self.num_anchors, self.grid_h, self.grid_w).fill_(0)
+        tw = self.FloatTensor(self.batch_size, self.num_anchors, self.grid_h, self.grid_w).fill_(0)
+        th = self.FloatTensor(self.batch_size, self.num_anchors, self.grid_h, self.grid_w).fill_(0)
+        tconf = self.FloatTensor(self.batch_size, self.num_anchors, self.grid_h, self.grid_w).fill_(0)
+        tcls = self.FloatTensor(self.batch_size, self.num_anchors, self.grid_h, self.grid_w, self.num_classes).fill_(0)
 
         # map target coordinate to grid size
         target_bbox = target[..., ::] * 1
@@ -108,7 +119,7 @@ class YOLOLayer(nn.Module):
         img_num = target_bbox[:, 0].long()
         target_label = target_bbox[:, -1].long()
         # compute iou
-        ious = torch.stack(tuple([bbox_wh_iou(torch.FloatTensor(anchor), gwh) for anchor in self.anchors]), 0)
+        ious = torch.stack(tuple([bbox_wh_iou(self.FloatTensor(anchor), gwh) for anchor in self.anchors]), 0)
         best_ious, best_index = ious.max(0)
         gx, gy = gxy.t()
         gw, gh = gwh.t()
@@ -119,15 +130,15 @@ class YOLOLayer(nn.Module):
 
         # Set noobj mask to zero where iou exceeds ignore threshold
         for i, anchor_ious in enumerate(ious.t()):
-            noobj_mask[[i], anchor_ious > self.ignore_threshold, gj[i], gi[i]] = 0
+            noobj_mask[img_num[i], anchor_ious > self.ignore_threshold, gj[i], gi[i]] = 0
 
         # Coordinates
         tx[img_num, best_index, gj, gi] = gx - gx.floor()
         ty[img_num, best_index, gj, gi] = gy - gy.floor()
 
         # Width and height
-        tw[img_num, best_index, gj, gi] = torch.log(gw / torch.FloatTensor(self.anchors)[best_index][:, 0] + 1e-16)
-        th[img_num, best_index, gj, gi] = torch.log(gh / torch.FloatTensor(self.anchors)[best_index][:, 1] + 1e-16)
+        tw[img_num, best_index, gj, gi] = torch.log(gw / self.FloatTensor(self.anchors)[best_index][:, 0] + 1e-16)
+        th[img_num, best_index, gj, gi] = torch.log(gh / self.FloatTensor(self.anchors)[best_index][:, 1] + 1e-16)
 
         # One-hot encoding of label
         tcls[img_num, best_index, gj, gi, target_label] = 1
@@ -138,26 +149,24 @@ class YOLOLayer(nn.Module):
         return obj_mask, noobj_mask, tx, ty, tw, th, tconf, tcls
 
     def __detect(self):
-        FloatTensor = torch.cuda.FloatTensor if self.center_x.is_cuda else torch.FloatTensor
-        LongTensor = torch.cuda.LongTensor if self.center_x.is_cuda else torch.LongTensor
         # compute offset
-        grid_x = FloatTensor(torch.linspace(0, self.grid_w - 1, self.grid_w).repeat((self.grid_w, 1)).repeat(
-            (self.batch_size * self.num_anchors, 1, 1)).view(self.center_x.shape))
-        grid_y = FloatTensor(torch.linspace(0, self.grid_h - 1, self.grid_h).repeat((self.grid_h, 1)).repeat(
-            (self.batch_size * self.num_anchors, 1, 1)).view(self.center_y.shape))
-        anchor_w = FloatTensor(self.scale_anchors).index_select(1, LongTensor([0]))
-        anchor_h = FloatTensor(self.scale_anchors).index_select(1, LongTensor([1]))
+        grid_x = torch.linspace(0, self.grid_w - 1, self.grid_w).repeat((self.grid_w, 1)).repeat(
+            (self.batch_size * self.num_anchors, 1, 1)).view(self.center_x.shape).type(self.FloatTensor)
+        grid_y = torch.linspace(0, self.grid_h - 1, self.grid_h).repeat((self.grid_h, 1)).repeat(
+            (self.batch_size * self.num_anchors, 1, 1)).view(self.center_y.shape).type(self.FloatTensor)
+        anchor_w = self.FloatTensor(self.scale_anchors).index_select(1, self.LongTensor([0]))
+        anchor_h = self.FloatTensor(self.scale_anchors).index_select(1, self.LongTensor([1]))
         anchor_w = anchor_w.repeat(self.batch_size, 1).repeat(1, 1, self.grid_h * self.grid_w).view(self.w.shape)
         anchor_h = anchor_h.repeat(self.batch_size, 1).repeat(1, 1, self.grid_h * self.grid_w).view(self.h.shape)
 
         # add offset
-        pred_boxes = FloatTensor(self.prediction[..., :4].shape)
+        pred_boxes = self.FloatTensor(self.prediction[..., :4].shape)
         pred_boxes[..., 0] = self.center_x.data + grid_x
         pred_boxes[..., 1] = self.center_y.data + grid_y
         pred_boxes[..., 2] = torch.exp(self.w.data) * anchor_w
         pred_boxes[..., 3] = torch.exp(self.h.data) * anchor_h
 
-        _scale = FloatTensor([self.stride_w, self.stride_h] * 2)
+        _scale = self.FloatTensor([self.stride_w, self.stride_h] * 2)
         output = torch.cat(
             (
                 pred_boxes.view((self.batch_size, -1, 4)) * _scale,
@@ -166,7 +175,7 @@ class YOLOLayer(nn.Module):
             ),
             -1,
         )
-        return output, 0
+        return output
 
 
 class Upsample(nn.Module):
