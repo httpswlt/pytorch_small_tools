@@ -73,7 +73,7 @@ def main():
     ssd.apply(weights_init)
     print(ssd)
     # load pretrain model
-    ssd.vgg.load_state_dict(torch.load("../premodel/vgg16_reducedfc.pth"))
+    # ssd.vgg.load_state_dict(torch.load("../premodel/vgg16_reducedfc.pth"))
     # ssd.load_state_dict(torch.load('./ssd_epoches_4524.pth'))
 
     # define loss function
