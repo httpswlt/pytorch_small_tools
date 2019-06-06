@@ -1,4 +1,5 @@
 # coding:utf-8
+import torch
 from torch import nn
 
 
@@ -41,3 +42,17 @@ def draw_image(image, coordinate):
     x1, y1, x2, y2 = int(coordinate[0]), int(coordinate[1]), int(coordinate[2]), int(coordinate[3])
     cv2.putText(image, "123", (x1, y1 + 10), cv2.FONT_HERSHEY_SIMPLEX, 0.5, (255, 255, 255), 2)
     cv2.rectangle(image, (x1, y1), (x2, y2), (0, 255, 0), 2)
+
+
+def one_hot_embedding(labels, num_classes):
+    """Embedding labels to one-hot form.
+
+    Args:
+      labels: (LongTensor) class labels, sized [N,].
+      num_classes: (int) number of classes.
+
+    Returns:
+      (tensor) encoded labels, sized [N,#classes].
+    """
+    y = torch.eye(num_classes)  # [D,D]
+    return y[labels]
