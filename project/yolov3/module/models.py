@@ -54,9 +54,10 @@ class Darknet(nn.Module):
                 # x, layer_loss = self.module_list[i](x, target)
                 x, layer_loss = self.module_list[i]((x, target))
                 loss += layer_loss
+                self.detections.append(x)
                 outputs[i] = outputs[i - 1]
 
-        return self.detections
+        return self.detections if target is None else (self.detections, loss)
 
     def load_weights(self, weightfile):
         fp = open(weightfile, "rb")

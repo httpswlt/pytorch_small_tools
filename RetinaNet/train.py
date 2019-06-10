@@ -12,7 +12,7 @@ def main():
     gamma = 0.2
     num_classes = 21
     epoch = 300
-    batch_size = 32
+    batch_size = 1
     # data_path = '/mnt/storage/project/data/VOCdevkit/VOC2007'
     data_path = '/home/lintaowx/datasets/VOC/VOCdevkit/VOC2007'
 
@@ -39,10 +39,10 @@ def main():
             # create batch iterator
             batch_iter = iter(DataLoader(data_set, batch_size, shuffle=True,
                                          num_workers=6, collate_fn=detection_collate))
-        images, targets = next(batch_iter)
+        images, loc_targets, cls_targets = next(batch_iter)
         optimizer.zero_grad()
         loc_preds, cls_preds = model(images)
-        loss = criterion(loc_preds, cls_preds, targets)
+        loss = criterion(loc_preds, loc_targets, cls_preds, cls_targets)
         loss.backward()
         optimizer.step()
 
