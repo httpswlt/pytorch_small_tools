@@ -1,6 +1,6 @@
 # coding:utf-8
-from data_tools.load_data_voc import LoadVocDataSets, AnnotationTransform
-from data_tools.load_data_voc import PreProcess, detection_collate
+from data_encoder.load_data_voc import LoadVocDataSets, AnnotationTransform
+from data_encoder.load_data_voc import PreProcess
 from model.retinanet import RetinaNet
 from loss.focal_loss import FocalLoss
 from torch import optim
@@ -17,7 +17,7 @@ def main():
     data_path = '/home/lintaowx/datasets/VOC/VOCdevkit/VOC2007'
 
     # define data.
-    data_set = LoadVocDataSets(data_path, 'trainval', AnnotationTransform(), PreProcess())
+    data_set = LoadVocDataSets(data_path, 'trainval', AnnotationTransform(), PreProcess(resize=(600, 600)))
 
     # define model
     model = RetinaNet(num_classes)
@@ -38,7 +38,7 @@ def main():
         if iteration % epoch_size == 0:
             # create batch iterator
             batch_iter = iter(DataLoader(data_set, batch_size, shuffle=True,
-                                         num_workers=6, collate_fn=detection_collate))
+                                         num_workers=6, collate_fn=data_set.detection_collate))
         images, loc_targets, cls_targets = next(batch_iter)
         optimizer.zero_grad()
         loc_preds, cls_preds = model(images)
@@ -46,8 +46,8 @@ def main():
         loss.backward()
         optimizer.step()
 
-        train_loss += loss.data[0]
-        print('train_loss: %.3f ' % (loss.data[0]))
+        train_loss += loss.item()
+        print('train_loss: %.3f ' % (loss.item()))
 
 
 if __name__ == '__main__':

@@ -13,7 +13,7 @@ class Bottleneck(nn.Module):
 
     def __init__(self, in_channels, out_channels, stride=1, bias=False):
         super(Bottleneck, self).__init__()
-        self.conv1 = nn.Conv2d(in_channels, out_channels, kernel_size=1, stride=stride, bias=bias)
+        self.conv1 = nn.Conv2d(in_channels, out_channels, kernel_size=1, stride=1, bias=bias)
         self.bn1 = nn.BatchNorm2d(out_channels)
         self.conv2 = nn.Conv2d(out_channels, out_channels, kernel_size=3, stride=stride, padding=1, bias=bias)
         self.bn2 = nn.BatchNorm2d(out_channels)
@@ -48,9 +48,9 @@ class FPN(nn.Module):
 
         # Bottom-up layers
         self.layer1 = self._make_layer(block, 64, num_blocks[0], stride=1)
-        self.layer2 = self._make_layer(block, 128, num_blocks[1], stride=1)
-        self.layer3 = self._make_layer(block, 256, num_blocks[2], stride=1)
-        self.layer4 = self._make_layer(block, 512, num_blocks[3], stride=1)
+        self.layer2 = self._make_layer(block, 128, num_blocks[1], stride=2)
+        self.layer3 = self._make_layer(block, 256, num_blocks[2], stride=2)
+        self.layer4 = self._make_layer(block, 512, num_blocks[3], stride=2)
         self.conv6 = nn.Conv2d(2048, 256, kernel_size=3, stride=2, padding=1)
         self.conv7 = nn.Conv2d(256, 256, kernel_size=3, stride=2, padding=1)
 
@@ -108,7 +108,7 @@ def FPN101():
 
 
 def test():
-    x = torch.zeros((2, 3, 600, 300))
+    x = torch.zeros((2, 3, 600, 600))
     model = FPN50()
     print(model)
     a = model(x)

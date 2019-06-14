@@ -55,7 +55,7 @@ def one_hot_embedding(labels, num_classes):
       (tensor) encoded labels, sized [N,#classes].
     """
     y = torch.eye(num_classes)  # [D,D]
-    return y[labels]
+    return y[labels.long()]
 
 
 def meshgrid(x, y, row_major=True):
