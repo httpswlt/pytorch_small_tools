@@ -12,29 +12,34 @@ class GHMLoss(nn.Module):
         super(GHMLoss, self).__init__()
         self.bins = None
         self.alpha = None
+        self.edges = None
+        self.acc_sum = None
         self._last_bin_count = None
 
     def forward(self, x, target):
         g = torch.abs(self._custom_loss_grad(x, target))
 
         bin_idx = self._g2bin(g)
-
-        bin_count = torch.zeros((self.bins,))
-        for i in range(self.bins):
-            bin_count[i] = (bin_idx == i).sum().item()
-
         n = x.size(0) * x.size(1)
+        weights = torch.zeros_like(x)
+        nonempty_bins = 0
 
-        if self._last_bin_count is not None:
-            bin_count = self.alpha * self._last_bin_count + (1 - self.alpha) * bin_count
-        self._last_bin_count = bin_count
+        for i in range(self.bins):
+            indx = (bin_idx == i)
+            bin_count = indx.sum().item()
+            if bin_count < 1:
+                continue
 
-        nonempty_bins = (bin_count > 0).sum().item()
+            self.acc_sum[i] = self.alpha * self.acc_sum[i] + (1 - self.alpha) * bin_count
+            weights[indx] = n / self.acc_sum[i]
+            self._last_bin_count = bin_count
+            nonempty_bins += 1
 
-        gd = bin_count * nonempty_bins
-        gd = torch.clamp(gd, min=0.0001)
-        beta = n / gd
-        return self._custom_loss(x, target, beta[bin_idx])
+        if nonempty_bins > 0:
+            weights = weights / nonempty_bins
+        weights = torch.clamp(weights, min=0.0001)
+
+        return self._custom_loss(x, target, weights)
 
     def _g2bin(self, g):
         return torch.floor(g * (self.bins - 0.0001)).long()
@@ -51,6 +56,8 @@ class GHMCLoss(GHMLoss):
         super(GHMLoss, self).__init__()
         self.bins = bins
         self.alpha = alpha
+        if self.alpha > 0:
+            self.acc_sum = [0.0 for _ in range(bins)]
         self._last_bin_count = None
 
     def _custom_loss(self, x, target, weight):
@@ -65,7 +72,8 @@ def main():
     target = torch.FloatTensor([[1., 0., 0., 1.]])
     mask = torch.FloatTensor([[1., 1., 1., 1.]])
     ghmc = GHMCLoss(10, 0.75)
-    print ghmc(pred, target)
+    print(ghmc(pred, target))
+
 
 if __name__ == '__main__':
     main()
