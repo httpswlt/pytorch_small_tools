@@ -6,7 +6,7 @@ def ic_layer(x, p):
     """
     Inference:
         https://arxiv.org/pdf/1905.05928.pdf
-        recommend use: conv->relu->ic
+        paper recommend use: ReLU-IC-Conv2D
     :param x: input data
     :param p: random to drop probability
     :return:
