@@ -17,10 +17,16 @@ class GHMLoss(nn.Module):
         self._last_bin_count = None
 
     def forward(self, x, target):
+        # calculate gradient by prediction.
         g = torch.abs(self._custom_loss_grad(x, target))
 
+        # # predict result map to custom interval
         bin_idx = self._g2bin(g)
+
+        # how many samples.
         n = x.size(0) * x.size(1)
+
+        # the weights of x
         weights = torch.zeros_like(x)
         nonempty_bins = 0
 
