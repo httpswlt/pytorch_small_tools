@@ -1,0 +1,7 @@
+Epoch:0, Loss10.0763, Top1:0.200,Top5:0.500
+Epoch:0, Loss5.7971, Top1:5.104,Top5:14.394
+Epoch:0, Loss5.7884, Top1:5.085,Top5:14.372
+Epoch:1, Loss4.3276, Top1:16.144,Top5:36.482
+Epoch:1, Loss4.3215, Top1:16.060,Top5:36.500
+Epoch:2, Loss3.7763, Top1:23.692,Top5:47.420
+Epoch:2, Loss3.7844, Top1:23.610,Top5:47.283
