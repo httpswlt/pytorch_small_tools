@@ -1,0 +1,8 @@
+classes=1
+train_set=/home/puge/tmp/sports-train/player_detection/training/pytorch_distribute/yolov3/train_freed_2k_imgname.txt
+valid_set=/home/puge/tmp/sports-train/player_detection/training/pytorch_distribute/yolov3/val_freed_2k_imgname.txt
+train_path=/home/puge/data/sports-training-data/player_detection/training_dataset
+valid_path=/home/puge/data/sports-training-data/player_detection/validate_dataset_5k_half_size/
+names=data/player.names
+backup=backup_player/
+eval=coco
