@@ -35,7 +35,8 @@ class DICE(nn.Module):
         self.weight_avg_layer = CBR(3 * in_channel, in_channel, ksize=1, stride=1, groups=in_channel)
 
         # project from in_channel to out_channel
-        groups_proj = math.gcd(in_channel, out_channel)
+        # groups_proj = math.gcd(in_channel, out_channel)
+        groups_proj = 2
         self.proj_layer = CBR(in_channel, out_channel, ksize=3, stride=1, groups=groups_proj)
         self.linear_comb_layer = nn.Sequential(
             nn.AdaptiveAvgPool2d(output_size=1),

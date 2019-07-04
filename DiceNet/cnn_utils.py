@@ -62,7 +62,7 @@ class CB(nn.Module):
         :param stride: stride rate for down-sampling. Default is 1
         :param groups: # of groups for group-wise convolution
         """
-        super().__init__()
+        super(CB, self).__init__()
         padding = int((ksize - 1) / 2) * dilation
         self.cb = nn.Sequential(
             nn.Conv2d(in_channel, out_channel, ksize, stride=stride, padding=padding, bias=False,
@@ -88,7 +88,7 @@ class BR(nn.Module):
         :param in_channel: number of input channels
         :param act_name: Name of the activation function
         """
-        super().__init__()
+        super(BR, self).__init__()
         self.br = nn.Sequential(
             nn.BatchNorm2d(in_channel),
             activation_fn(in_channel, name=act_name)
