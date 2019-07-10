@@ -14,14 +14,10 @@ class GHMLoss(nn.Module):
         self.alpha = None
         self.edges = None
         self.acc_sum = None
-        self._last_bin_count = None
 
     def forward(self, x, target):
         # calculate gradient by prediction.
         g = torch.abs(self._custom_loss_grad(x, target))
-
-        # # predict result map to custom interval
-        bin_idx = self._g2bin(g)
 
         # how many samples.
         n = x.size(0) * x.size(1)
@@ -31,21 +27,27 @@ class GHMLoss(nn.Module):
         nonempty_bins = 0
 
         for i in range(self.bins):
-            indx = (bin_idx == i)
+            indx = self._gnormal(g, i)
             bin_count = indx.sum().item()
             if bin_count < 1:
                 continue
 
-            self.acc_sum[i] = self.alpha * self.acc_sum[i] + (1 - self.alpha) * bin_count
-            weights[indx] = n / self.acc_sum[i]
-            self._last_bin_count = bin_count
+            if self.alpha > 0:
+                self.acc_sum[i] = self.alpha * self.acc_sum[i] + (1 - self.alpha) * bin_count
+                weights[indx] = n / self.acc_sum[i]
+            else:
+                weights[indx] = n / bin_count
             nonempty_bins += 1
 
         if nonempty_bins > 0:
             weights = weights / nonempty_bins
+
         weights = torch.clamp(weights, min=0.0001)
 
         return self._custom_loss(x, target, weights)
+
+    def _gnormal(self, g, i):
+        return (g >= self.edges[i]) & (g < self.edges[i + 1])
 
     def _g2bin(self, g):
         return torch.floor(g * (self.bins - 0.0001)).long()
@@ -62,9 +64,10 @@ class GHMCLoss(GHMLoss):
         super(GHMLoss, self).__init__()
         self.bins = bins
         self.alpha = alpha
+        self.edges = [float(x) / bins for x in range(bins+1)]
+        self.edges[-1] += 1e-6
         if self.alpha > 0:
             self.acc_sum = [0.0 for _ in range(bins)]
-        self._last_bin_count = None
 
     def _custom_loss(self, x, target, weight):
         return F.binary_cross_entropy_with_logits(x, target, weight=weight)
