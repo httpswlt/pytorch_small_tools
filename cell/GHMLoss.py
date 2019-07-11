@@ -62,7 +62,7 @@ class GHMLoss(nn.Module):
 
 
 class GHMCLoss(GHMLoss):
-    def __init__(self, bins, alpha):
+    def __init__(self, bins=10, alpha=0.0):
         super(GHMCLoss, self).__init__(bins, alpha)
 
     def _custom_loss(self, x, target, weight):
@@ -73,7 +73,7 @@ class GHMCLoss(GHMLoss):
 
 
 class GHMRLoss(GHMLoss):
-    def __init__(self, bins, alpha, mu):
+    def __init__(self, bins=10, alpha=0.0, mu=0.2):
         super(GHMRLoss, self).__init__(bins, alpha)
         self._mu = mu
 
