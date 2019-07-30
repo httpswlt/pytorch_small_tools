@@ -102,10 +102,6 @@ def main(cfg):
     for epoch in range(cfg.epochs):
         for i, (imgs, _) in enumerate(dataloader):
 
-            # adversarial ground truths
-            valid = tensor(imgs.size(0), 1).fill_(1.0)
-            fake = tensor(imgs.size(0), 1).fill_(0.0)
-
             # real image
             real_imgs = imgs.type(tensor)
             # generator to generate images from these noise images.
@@ -160,15 +156,16 @@ def test():
 class Parameter:
     epochs = 200
     batch_size = 64
-    lr = 0.0002
+    lr = 0.00005
     num_workers = 8
     latent_dim = 100
     img_size = 32
     sample_interval = 1000
     shuffle = True
     img_channel = 1
-    clip_value = 5
-
+    clip_value = 0.01
+    img_shape = (img_channel, img_size, img_size)
+    n_critic = 5
 
 if __name__ == '__main__':
     main(Parameter())
