@@ -112,8 +112,8 @@ def main():
     cudnn.benchmark = True
 
     # Data loading code
-    traindir = '/home/lintaowx/datasets/cifar10/train'
-    valdir = '/home/lintaowx/datasets/cifar10/test'
+    traindir = '~/datasets/cifar10/train'
+    valdir = '~/datasets/cifar10/test'
     # traindir = os.path.join(args.data, 'train')
     # valdir = os.path.join(args.data, 'val')
     normalize = transforms.Normalize(mean=[0.485, 0.456, 0.406],

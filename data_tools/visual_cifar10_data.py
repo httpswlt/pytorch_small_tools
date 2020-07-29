@@ -26,8 +26,8 @@ def save_file(data_dict, save_path):
 
 
 def main():
-    root_path = '/home/lintaowx/datasets/cifar-10-batches-py'
-    save_path = '/home/lintaowx/datasets/cifar10'
+    root_path = '~/datasets/cifar-10-batches-py'
+    save_path = '~/datasets/cifar10'
 
     for f in os.listdir(root_path):
         if '_batch' not in f:

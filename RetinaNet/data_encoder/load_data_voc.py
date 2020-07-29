@@ -140,7 +140,7 @@ class LoadVocDataSets(Dataset):
 
 if __name__ == '__main__':
     # data_path = '/mnt/storage/project/data/VOCdevkit/VOC2007'
-    data_path = '/home/lintaowx/datasets/VOC/VOCdevkit/VOC2007'
+    data_path = '~/datasets/VOC/VOCdevkit/VOC2007'
     data_set = LoadVocDataSets(data_path, 'trainval', AnnotationTransform(), PreProcess())
     batch_size = 32
     batch_iter = iter(DataLoader(data_set, batch_size, shuffle=False, num_workers=1, collate_fn=data_set.detection_collate))

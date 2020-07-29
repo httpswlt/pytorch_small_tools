@@ -39,7 +39,7 @@ def collate_fn(batch):
 
 
 if __name__ == '__main__':
-    data_path = '/home/lintaowx/datasets/cifar10/train'
+    data_path = '~/datasets/cifar10/train'
     data_set = LoadClassifyDataSets(data_path, 227)
     batch_size = 64
     loader = DataLoader(data_set, batch_size, shuffle=True, num_workers=1, drop_last=True, collate_fn=collate_fn)

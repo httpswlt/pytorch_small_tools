@@ -59,7 +59,7 @@ def main():
     epoch = 300
     batch_size = 32
     # data_path = '/mnt/storage/project/data/VOCdevkit/VOC2007'
-    data_path = '/home/lintaowx/datasets/VOC/VOCdevkit/VOC2007'
+    data_path = '~/datasets/VOC/VOCdevkit/VOC2007'
 
     # define data.
     data_set = LoadVocDataSets(data_path, 'trainval', AnnotationTransform(), PreProcess())

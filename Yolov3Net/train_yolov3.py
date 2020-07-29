@@ -22,12 +22,12 @@ def main():
     gamma = conf_yolov3['gamma']
     # load data
     # data_path = '/mnt/storage/project/data/VOCdevkit/VOC2007'
-    data_path = '/home/lintaowx/datasets/VOC/VOCdevkit/VOC2007'
+    data_path = '~/datasets/VOC/VOCdevkit/VOC2007'
     data_set = LoadVocDataSets(data_path, 'trainval', AnnotationTransform(), PreProcess(resize=(416, 416)))
 
     # define network.
     yolov3 = YOLOV3(conf_yolov3).cuda()
-    print yolov3
+    print(yolov3)
 
     # define loss function.
     yolo_losses = [YOlOLoss(conf_yolov3, i).cuda() for i in range(3)]

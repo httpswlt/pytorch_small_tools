@@ -54,7 +54,7 @@ def run(gpu, config):
         model = apex.parallel.DistributedDataParallel(model, delay_allreduce=True)
 
     # load data
-    data_path = '/home/lintaowx/datasets/cifar10/train'
+    data_path = '~/datasets/cifar10/train'
     train_set = LoadClassifyDataSets(data_path, 227)
     train_sampler = None
     if config['distribute']:

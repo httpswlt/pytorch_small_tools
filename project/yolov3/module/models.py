@@ -124,7 +124,7 @@ class Darknet(nn.Module):
 def main():
     from data.load_data import *
     cfg_path = '../config/yolov3.cfg'
-    data_path = '/home/lintaowx/datasets/VOC/VOCdevkit/VOC2007'
+    data_path = '~/datasets/VOC/VOCdevkit/VOC2007'
     data_set = LoadDataSets(data_path, 'trainval', AnnotationTransform(), PreProcess())
     batch_size = 12
     batch_iter = iter(DataLoader(data_set, batch_size, shuffle=False, num_workers=1, collate_fn=detection_collate))

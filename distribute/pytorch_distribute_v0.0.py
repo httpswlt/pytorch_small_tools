@@ -44,7 +44,7 @@ def main(is_distributed, rank, ip):
                                 weight_decay=weight_decay)
 
     # load train data
-    data_path = '/home/lintaowx/datasets/cifar10/train'
+    data_path = '~/datasets/cifar10/train'
     train_set = LoadClassifyDataSets(data_path, 227)
     train_sampler = None
     if is_distributed:

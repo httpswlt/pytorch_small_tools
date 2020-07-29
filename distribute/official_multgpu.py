@@ -117,7 +117,7 @@ def main_worker(gpu, ngpus_per_node, args):
     global best_acc1
     args.gpu = gpu
     args.dist_url = 'tcp://172.16.123.114:10000'
-    args.data = '/home/lintaowx/datasets/cifar10'
+    args.data = '~/datasets/cifar10'
     if args.gpu is not None:
         print("Use GPU: {} for training".format(args.gpu))
 

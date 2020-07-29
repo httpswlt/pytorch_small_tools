@@ -14,7 +14,7 @@ from utils import AverageMeter, save_checkpoint, accuracy, adjust_learning_rate_
 
 
 parser = argparse.ArgumentParser(description='PyTorch ImageNet Training')
-parser.add_argument('-data', '--data', default='/home/lintaowx/datasets/ImageNet2012', type=str, metavar='P',
+parser.add_argument('-data', '--data', default='~/datasets/ImageNet2012', type=str, metavar='P',
 # parser.add_argument('-data', '--data', default='/ifs/training_data/ImageNet2012', type=str, metavar='P',
                     help='path to dataset')
 parser.add_argument('-j', '--workers', default=24, type=int, metavar='N',
