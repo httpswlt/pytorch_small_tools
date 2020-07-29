@@ -35,7 +35,7 @@ class LoadDataSets(Dataset):
             self.target = self.target_transform(self._anno_path % img_id)
 
         if not (isinstance(self.target, np.ndarray) and isinstance(self.img, np.ndarray)):
-            print "Need Target And Image For Object Detection."
+            print("Need Target And Image For Object Detection.")
             exit(0)
 
         if self.pre_process is not None:

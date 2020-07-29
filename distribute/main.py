@@ -125,7 +125,7 @@ def main(is_distributed, sync_bn, rank):
             print("test01")
             output = model(temp)
             print("test1")
-            loss = criterion(output, target.cuda(async=True))
+            loss = criterion(output, target.cuda())
             print("test2")
             optimizer.zero_grad()
             print("test3")

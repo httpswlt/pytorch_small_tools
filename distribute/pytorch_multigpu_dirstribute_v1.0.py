@@ -82,7 +82,7 @@ def train(train_loader, model, criterion, optimizer, epoch, gpu):
         time_model_2 = time.time()
         print("model time: {}".format(time_model_2 - time_model_1))
         time_loss_1 = time.time()
-        loss = criterion(output, target.cuda(async=True))
+        loss = criterion(output, target.cuda())
         time_loss_2 = time.time()
         print("loss time: {}".format(time_loss_2 - time_loss_1))
         optimizer.zero_grad()
